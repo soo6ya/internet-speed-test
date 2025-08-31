@@ -6,7 +6,6 @@
   <title>Internet Speed Test</title>
 
   <style>
-    /* ---------- Design ---------- */
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
@@ -71,8 +70,6 @@
     .result-card h2{ font-size:1.05rem; margin-bottom:8px; }
     .value{ font-size:1.6rem; font-weight:800; }
 
-    .small { font-size:0.9rem; color:#374151; margin-top:8px; }
-
     /* Spinner */
     .spinner {
       width:18px; height:18px; border-radius:50%;
@@ -84,7 +81,6 @@
 
     .error { color:#ffb4b4; margin-top:12px; font-weight:600; }
     .muted { opacity:.85; font-size:0.95rem }
-    footer { margin-top:18px; color: rgba(255,255,255,0.75); font-size:0.88rem }
   </style>
 </head>
 <body>
@@ -101,28 +97,21 @@
       <div class="result-card">
         <h2>Ping</h2>
         <div id="ping" class="value">—</div>
-        <div class="small">Round-trip latency</div>
       </div>
       <div class="result-card">
         <h2>Download</h2>
         <div id="download" class="value">—</div>
-        <div class="small">Measured in Mbps</div>
       </div>
     </div>
 
     <div id="error" class="error" role="alert" aria-hidden="true"></div>
-    <footer>
-      This runs entirely from GitHub Pages.<a href="https://www.instagram.com/soo6ya"> Made by Soo6ya </a>.
-    </footer>
   </section>
 
   <script>
-    // ---------- Config ----------
-    const TEST_FILE = "testfile.jpg";   // must be in same folder (case-sensitive)
-    const MAX_TIME_MS = 20000;          // abort timeout
+    const TEST_FILE = "testfile.jpg";   
+    const MAX_TIME_MS = 20000;          
     const $ = id => document.getElementById(id);
 
-    // Hook button
     $("start").addEventListener("click", runTest);
 
     async function runTest() {
@@ -149,7 +138,6 @@
       }
     }
 
-    // Ping: best of N HEAD requests (same-origin)
     async function measurePing(url, attempts = 3) {
       let best = Infinity;
       for (let i=0;i<attempts;i++){
@@ -157,15 +145,12 @@
         const timer = setTimeout(()=>controller.abort(), MAX_TIME_MS);
         const t0 = performance.now();
         try {
-          // HEAD is lightweight; GitHub Pages supports it
           await fetch(`${url}?ping=${Math.random()}`, { method: "HEAD", cache: "no-store", signal: controller.signal });
           const t1 = performance.now();
           best = Math.min(best, t1 - t0);
         } catch (e) {
-          // ignore single failures
         } finally {
           clearTimeout(timer);
-          // small delay between tries
           await new Promise(r => setTimeout(r, 120));
         }
       }
@@ -173,7 +158,6 @@
       return best;
     }
 
-    // Download: fetch, read ArrayBuffer and compute bytes/time
     async function measureDownload(url) {
       const controller = new AbortController();
       const timer = setTimeout(()=>controller.abort(), MAX_TIME_MS);
@@ -181,7 +165,6 @@
       const resp = await fetch(`${url}?dl=${Math.random()}`, { cache: "no-store", signal: controller.signal });
       clearTimeout(timer);
       if (!resp.ok) throw new Error("HTTP " + resp.status);
-      // try content-length header first
       let bytes = Number(resp.headers.get("content-length"));
       const buf = await resp.arrayBuffer();
       if (!bytes || Number.isNaN(bytes)) bytes = buf.byteLength;
@@ -191,11 +174,6 @@
       const mbps = bits / seconds / 1024 / 1024;
       return mbps;
     }
-
-    // Quick helpful checks in console if user wants to debug:
-    // console.log("testfile path check:", location.pathname, TEST_FILE);
   </script>
 </body>
 </html>
-
-
