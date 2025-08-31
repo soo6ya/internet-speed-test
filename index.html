@@ -1,17 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Internet Speed Test</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
+  <main class="container">
     <h1>Internet Speed Test</h1>
-    <button id="startBtn">Start Test</button>
-    <div class="result" id="result">Download Speed: -- Mbps</div>
-  </div>
-  <script src="script.js"></script>
+    <button id="start">Start Test</button>
+    <p id="status" role="status">Idle</p>
+
+    <section class="grid">
+      <div class="card"><h2>Ping</h2><div id="ping">—</div></div>
+      <div class="card"><h2>Download</h2><div id="download">—</div></div>
+    </section>
+
+    <p id="error" class="error"></p>
+  </main>
+  <script defer src="script.js"></script>
 </body>
 </html>
