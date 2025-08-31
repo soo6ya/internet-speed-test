@@ -4,21 +4,201 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Internet Speed Test</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* ---------- Design ---------- */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(135deg,#0f172a 0%, #1e293b 50%, #3b82f6 100%);
+      color:#0b1220;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.06);
+      border-radius:20px;
+      padding:28px;
+      width:820px;
+      max-width:96%;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+      backdrop-filter: blur(8px);
+      color: #fff;
+    }
+
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    h1 { font-size:1.9rem; letter-spacing:0.2px; }
+    .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    button{
+      background: linear-gradient(180deg,#fff,#f0f0f0);
+      color:#2b1256;
+      border:none;
+      border-radius:999px;
+      padding:10px 18px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow: 0 6px 18px rgba(11,16,49,0.35);
+      transition:transform .18s ease, box-shadow .18s;
+    }
+    button:active{ transform:translateY(1px) }
+    button[disabled]{ opacity:.6; cursor:not-allowed; transform:none }
+
+    #status { font-size:0.95rem; opacity:.9; margin-top:8px; }
+
+    .results {
+      display:flex;
+      gap:16px;
+      margin-top:22px;
+      align-items:stretch;
+      flex-wrap:wrap;
+    }
+
+    .result-card {
+      background: #ffffff;
+      color:#0f172a;
+      border-radius:14px;
+      padding:18px 22px;
+      flex:1 1 200px;
+      min-width:180px;
+      box-shadow: 0 8px 22px rgba(2,6,23,0.25);
+      transition: transform .18s;
+    }
+    .result-card:hover{ transform: translateY(-6px) }
+    .result-card h2{ font-size:1.05rem; margin-bottom:8px; }
+    .value{ font-size:1.6rem; font-weight:800; }
+
+    .small { font-size:0.9rem; color:#374151; margin-top:8px; }
+
+    /* Spinner */
+    .spinner {
+      width:18px; height:18px; border-radius:50%;
+      border:3px solid rgba(255,255,255,0.35);
+      border-top-color: #fff; animation:spin .9s linear infinite;
+      display:inline-block; vertical-align:middle; margin-right:8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg) } }
+
+    .error { color:#ffb4b4; margin-top:12px; font-weight:600; }
+    .muted { opacity:.85; font-size:0.95rem }
+    footer { margin-top:18px; color: rgba(255,255,255,0.75); font-size:0.88rem }
+  </style>
 </head>
 <body>
-  <main class="container">
-    <h1>Internet Speed Test</h1>
-    <button id="start">Start Test</button>
-    <p id="status" role="status">Idle</p>
+  <section class="card" aria-live="polite">
+    <header>
+      <h1>Internet Speed Test</h1>
+      <div class="controls">
+        <button id="start">Start Test</button>
+        <div id="status" class="muted">Idle</div>
+      </div>
+    </header>
 
-    <section class="grid">
-      <div class="card"><h2>Ping</h2><div id="ping">—</div></div>
-      <div class="card"><h2>Download</h2><div id="download">—</div></div>
-    </section>
+    <div class="results" role="region" aria-label="results">
+      <div class="result-card">
+        <h2>Ping</h2>
+        <div id="ping" class="value">—</div>
+        <div class="small">Round-trip latency</div>
+      </div>
+      <div class="result-card">
+        <h2>Download</h2>
+        <div id="download" class="value">—</div>
+        <div class="small">Measured in Mbps</div>
+      </div>
+      <div class="result-card">
+        <h2>Notes</h2>
+        <div id="notes" class="small">Use a larger test file (2–5MB) for smoother results.</div>
+      </div>
+    </div>
 
-    <p id="error" class="error"></p>
-  </main>
-  <script defer src="script.js"></script>
+    <div id="error" class="error" role="alert" aria-hidden="true"></div>
+
+    <footer>
+      This runs entirely from GitHub Pages. Make sure <code>testfile.jpg</code> is in the same folder as this page.
+    </footer>
+  </section>
+
+  <script>
+    // ---------- Config ----------
+    const TEST_FILE = "testfile.jpg";   // must be in same folder (case-sensitive)
+    const MAX_TIME_MS = 20000;          // abort timeout
+    const $ = id => document.getElementById(id);
+
+    // Hook button
+    $("start").addEventListener("click", runTest);
+
+    async function runTest() {
+      $("error").textContent = ""; $("error").setAttribute("aria-hidden","true");
+      $("status").innerHTML = '<span class="spinner"></span> Running…';
+      $("start").disabled = true;
+      $("ping").textContent = "—"; $("download").textContent = "—";
+
+      try {
+        const pingMs = await measurePing(TEST_FILE, 3);
+        $("ping").textContent = Math.round(pingMs) + " ms";
+
+        const mbps = await measureDownload(TEST_FILE);
+        $("download").textContent = mbps.toFixed(2) + " Mbps";
+
+        $("status").textContent = "Done";
+      } catch (err) {
+        console.error(err);
+        $("error").textContent = "Error: Could not complete the test. See console (F12) for details.";
+        $("error").setAttribute("aria-hidden","false");
+        $("status").textContent = "Failed";
+      } finally {
+        $("start").disabled = false;
+      }
+    }
+
+    // Ping: best of N HEAD requests (same-origin)
+    async function measurePing(url, attempts = 3) {
+      let best = Infinity;
+      for (let i=0;i<attempts;i++){
+        const controller = new AbortController();
+        const timer = setTimeout(()=>controller.abort(), MAX_TIME_MS);
+        const t0 = performance.now();
+        try {
+          // HEAD is lightweight; GitHub Pages supports it
+          await fetch(`${url}?ping=${Math.random()}`, { method: "HEAD", cache: "no-store", signal: controller.signal });
+          const t1 = performance.now();
+          best = Math.min(best, t1 - t0);
+        } catch (e) {
+          // ignore single failures
+        } finally {
+          clearTimeout(timer);
+          // small delay between tries
+          await new Promise(r => setTimeout(r, 120));
+        }
+      }
+      if (!isFinite(best)) throw new Error("Ping failed");
+      return best;
+    }
+
+    // Download: fetch, read ArrayBuffer and compute bytes/time
+    async function measureDownload(url) {
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), MAX_TIME_MS);
+      const start = performance.now();
+      const resp = await fetch(`${url}?dl=${Math.random()}`, { cache: "no-store", signal: controller.signal });
+      clearTimeout(timer);
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      // try content-length header first
+      let bytes = Number(resp.headers.get("content-length"));
+      const buf = await resp.arrayBuffer();
+      if (!bytes || Number.isNaN(bytes)) bytes = buf.byteLength;
+      const seconds = (performance.now() - start) / 1000;
+      if (seconds <= 0) throw new Error("Timing error");
+      const bits = bytes * 8;
+      const mbps = bits / seconds / 1024 / 1024;
+      return mbps;
+    }
+
+    // Quick helpful checks in console if user wants to debug:
+    // console.log("testfile path check:", location.pathname, TEST_FILE);
+  </script>
 </body>
 </html>
